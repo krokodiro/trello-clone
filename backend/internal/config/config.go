@@ -63,6 +63,26 @@ func AllowedWebOrigins(webURL string) []string {
 	return out
 }
 
+// OriginAllowed checks CORS. On Render, any *.onrender.com origin is allowed
+// so the app works before WEB_URL is configured.
+func OriginAllowed(origin string, allowed []string) bool {
+	if origin == "" {
+		return true
+	}
+	origin = strings.TrimRight(origin, "/")
+	for _, a := range allowed {
+		if origin == strings.TrimRight(a, "/") {
+			return true
+		}
+	}
+	if os.Getenv("RENDER_EXTERNAL_URL") != "" || os.Getenv("RENDER") == "true" {
+		if strings.HasSuffix(origin, ".onrender.com") {
+			return true
+		}
+	}
+	return false
+}
+
 func smtpFrom() string {
 	if from := os.Getenv("SMTP_FROM"); from != "" {
 		return from
