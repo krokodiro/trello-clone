@@ -57,6 +57,9 @@ func main() {
 	mailer := email.New(cfg)
 	hub := ws.NewHub(rdb, tm)
 
+	corsOrigins := config.AllowedWebOrigins(cfg.WebURL)
+	log.Printf("WEB_URL=%q API_URL=%q CORS=%v", cfg.WebURL, cfg.APIURL, corsOrigins)
+
 	authH := handler.NewAuthHandler(st, tm, cfg, mailer)
 	notifH := handler.NewNotificationHandler(st, hub)
 	wsH := handler.NewWorkspaceHandler(st, cfg, hub, mailer, notifH)
@@ -66,7 +69,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{cfg.WebURL},
+		AllowedOrigins:   corsOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,

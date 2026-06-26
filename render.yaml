@@ -1,8 +1,5 @@
 # One-click deploy on Render (free tier).
-# 1. Push this repo to GitHub
-# 2. Open https://dashboard.render.com/blueprint/new
-# 3. Connect the repo — Render creates all services below
-# 4. After deploy, open trello-api → Environment and set WEB_URL to your trello-web URL (e.g. https://trello-web-xxxx.onrender.com)
+# After first deploy, set the 3 env vars listed in DEPLOY.md.
 
 databases:
   - name: trello-db
@@ -51,9 +48,7 @@ services:
     rootDir: frontend
     plan: free
     envVars:
-      # Use Render private network service name (not hostport — that hostname can fail DNS).
-      - key: API_URL
-        value: http://trello-api:10000
-      # Required for live board/notification updates — set to wss://YOUR-trello-api.onrender.com
-      - key: NEXT_PUBLIC_WS_URL
+      - key: API_PUBLIC_URL
+        sync: false
+      - key: WS_PUBLIC_URL
         sync: false

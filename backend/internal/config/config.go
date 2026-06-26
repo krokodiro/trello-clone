@@ -18,7 +18,7 @@ func Load() *Config {
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://trello:trello@localhost:5432/trello?sslmode=disable"),
 		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
 		JWTSecret:          getEnv("JWT_SECRET", "dev-secret-change-in-production"),
-		WebURL:             getEnv("WEB_URL", "http://localhost:3000"),
+		WebURL:             strings.TrimRight(getEnv("WEB_URL", "http://localhost:3000"), "/"),
 		APIURL:             apiURL(),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -35,6 +35,32 @@ func Load() *Config {
 		AdminPassword:      getEnv("ADMIN_PASSWORD", "admin123456"),
 		AdminName:          getEnv("ADMIN_NAME", "Admin"),
 	}
+}
+
+func AllowedWebOrigins(webURL string) []string {
+	seen := map[string]struct{}{}
+	var out []string
+	add := func(s string) {
+		s = strings.TrimSpace(strings.TrimRight(s, "/"))
+		if s == "" {
+			return
+		}
+		if _, ok := seen[s]; ok {
+			return
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	for _, part := range strings.Split(webURL, ",") {
+		add(part)
+	}
+	if extra := os.Getenv("ALLOWED_ORIGINS"); extra != "" {
+		for _, part := range strings.Split(extra, ",") {
+			add(part)
+		}
+	}
+	add("http://localhost:3000")
+	return out
 }
 
 func smtpFrom() string {
@@ -78,10 +104,10 @@ func getEnv(key, fallback string) string {
 
 func apiURL() string {
 	if v := os.Getenv("API_URL"); v != "" {
-		return v
+		return strings.TrimRight(v, "/")
 	}
 	if v := os.Getenv("RENDER_EXTERNAL_URL"); v != "" {
-		return v
+		return strings.TrimRight(v, "/")
 	}
 	return "http://localhost:8080"
 }

@@ -1,7 +1,11 @@
+import { getClientConfig } from "@/lib/runtime-config";
+
 function requestBase() {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  const { apiUrl } = getClientConfig();
+  if (apiUrl) return apiUrl;
+  // Local/docker: same-origin proxy at /api/v1/*
   if (typeof window !== "undefined") return "";
-  return process.env.API_URL || "http://localhost:8080";
+  return process.env.API_PUBLIC_URL || process.env.API_URL || "http://localhost:8080";
 }
 
 let accessToken: string | null = null;
@@ -42,7 +46,8 @@ export function getAccessToken() {
 async function refreshAccessToken(): Promise<boolean> {
   loadTokens();
   if (!refreshToken) return false;
-  const res = await fetch(`${requestBase()}/api/v1/auth/refresh`, {
+  const base = requestBase();
+  const res = await fetch(`${base}/api/v1/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -95,10 +100,12 @@ export function getApiUrl() {
 }
 
 export function getWsUrl() {
-  if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
+  const { apiUrl, wsUrl } = getClientConfig();
+  if (wsUrl) return wsUrl;
+  if (apiUrl) return apiUrl.replace(/^http/, "ws");
   if (typeof window !== "undefined") {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL.replace(/^http/, "ws");
+    if (window.location.hostname === "localhost") {
+      return "ws://localhost:8080";
     }
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${proto}//${window.location.host}`;

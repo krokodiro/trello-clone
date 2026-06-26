@@ -2,58 +2,50 @@
 
 ## Prerequisites
 
-- A free [GitHub](https://github.com) account
-- A free [Render](https://render.com) account
+- Free [GitHub](https://github.com) + [Render](https://render.com) accounts
+- Repo: https://github.com/krokodiro/trello-clone
 
-## Steps (about 5 minutes)
+## 1. Create services (one time)
 
-### 1. Push code to GitHub
+Open **[Create Blueprint](https://dashboard.render.com/blueprint/new?repo=https://github.com/krokodiro/trello-clone)** → connect GitHub → **Apply**.
 
-Create a new repository on GitHub, then from this folder:
+Wait until **trello-api** and **trello-web** both show **Live**.
 
-```powershell
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/trello-clone.git
-git push -u origin main
-```
+## 2. Set three environment variables (required)
 
-### 2. Deploy on Render
+Copy your public URLs from the Render dashboard (no trailing slash).
 
-1. Open **[Create Blueprint](https://dashboard.render.com/blueprint/new?repo=https://github.com/krokodiro/trello-clone)**
-2. Connect your GitHub account and select the `trello-clone` repository
-3. Click **Apply** — Render creates Postgres, Redis, API, and Web services
-4. Wait for all services to finish deploying (first build takes ~5–10 min)
+| Service | Variable | Example value |
+|---------|----------|---------------|
+| **trello-api** | `WEB_URL` | `https://trello-web-xxxx.onrender.com` |
+| **trello-web** | `API_PUBLIC_URL` | `https://trello-api-xxxx.onrender.com` |
+| **trello-web** | `WS_PUBLIC_URL` | `wss://trello-api-xxxx.onrender.com` |
 
-If services already exist with wrong paths, open each web service → **Settings** → set **Root Directory** to `backend` or `frontend`, then **Manual Deploy**.
+Save each service — Render redeploys automatically.
 
-### 3. One-time config after first deploy
+## 3. Verify
 
-1. Open **trello-web** and copy its URL (e.g. `https://trello-web-xxxx.onrender.com`)
-2. Open **trello-api** → **Environment**:
-   - Set `WEB_URL` to the trello-web URL
-   - Copy the trello-api URL (e.g. `https://trello-api-xxxx.onrender.com`)
-3. Open **trello-web** → **Environment**:
-   - Set `NEXT_PUBLIC_WS_URL` to `wss://YOUR-trello-api.onrender.com` (same host as API, `wss://` prefix)
-   - If register/login still fails, set `API_URL` to `https://YOUR-trello-api.onrender.com` (public URL fallback)
-4. Save — Render redeploys automatically
+1. Open `https://YOUR-trello-web.onrender.com/api/config`  
+   You should see `"mode":"direct"` and your API URL.
+2. Open `https://YOUR-trello-api.onrender.com/health`  
+   Should return `{"status":"ok"}`.
+3. Register or sign in on the web URL.
 
-### 4. Sign in
+## Admin login
 
-Open your **trello-web** URL. Admin credentials are in the Render dashboard under **trello-api** → **Environment** (`ADMIN_EMAIL` / generated `ADMIN_PASSWORD`).
+**trello-api** → **Environment** → `ADMIN_EMAIL` / `ADMIN_PASSWORD` (auto-generated).
 
-## Notes
+## Troubleshooting
 
-- Free services spin down after inactivity; first load may take ~30 seconds
-- Free Postgres expires after 90 days on Render — upgrade or export data for long-term use
-- To redeploy after code changes: push to GitHub; Render auto-deploys
+- **Register/login fails / CORS error** → `WEB_URL` on API must exactly match your web URL (https, no trailing `/`).
+- **`/api/config` shows `"mode":"proxy"`** → set `API_PUBLIC_URL` on trello-web and redeploy.
+- **WebSockets / live updates broken** → set `WS_PUBLIC_URL` to `wss://` + same host as API.
+- **Free tier cold start** → first request after idle can take ~30s.
 
-## Local production (alternative)
+## Local production
 
 ```powershell
 docker compose -f docker-compose.prod.yml up --build -d
 ```
 
-App: http://localhost:3000 · API: http://localhost:8080
+App: http://localhost:3000 (uses internal proxy; no extra env needed)
