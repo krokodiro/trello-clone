@@ -95,7 +95,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusInternalServerError, "failed to create user")
 		return
 	}
-	if err := h.sendVerificationEmail(r.Context(), user); err != nil {
+	link, err := h.sendVerificationEmail(r.Context(), user)
+	if err != nil {
 		log.Printf("verification email error: %v", err)
 	}
 	pair, err := h.issueTokens(r.Context(), user)
@@ -103,12 +104,16 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusInternalServerError, "failed to issue tokens")
 		return
 	}
-	JSON(w, http.StatusCreated, map[string]interface{}{
-		"user":                 sanitizeUser(user),
-		"tokens":               pair,
-		"verification_sent":    true,
-		"email_verified":       false,
-	})
+	resp := map[string]interface{}{
+		"user":              sanitizeUser(user),
+		"tokens":            pair,
+		"verification_sent": h.mailer.Enabled(),
+		"email_verified":    false,
+	}
+	if link != "" && !h.mailer.Enabled() {
+		resp["verification_url"] = link
+	}
+	JSON(w, http.StatusCreated, resp)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -192,8 +197,14 @@ func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request)
 		JSON(w, http.StatusOK, map[string]string{"message": "email already verified"})
 		return
 	}
-	if err := h.sendVerificationEmail(r.Context(), user); err != nil {
+	if link, err := h.sendVerificationEmail(r.Context(), user); err != nil {
 		log.Printf("verification email error: %v", err)
+	} else if link != "" && !h.mailer.Enabled() {
+		JSON(w, http.StatusOK, map[string]string{
+			"message":          "if the account exists, a verification email has been sent",
+			"verification_url": link,
+		})
+		return
 	}
 	JSON(w, http.StatusOK, map[string]string{"message": "if the account exists, a verification email has been sent"})
 }
@@ -257,17 +268,23 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	JSON(w, http.StatusOK, map[string]string{"message": "password updated"})
 }
 
-func (h *AuthHandler) sendVerificationEmail(ctx context.Context, user *models.User) error {
+func (h *AuthHandler) sendVerificationEmail(ctx context.Context, user *models.User) (string, error) {
 	token, hash, expires, err := h.generateAuthToken(emailVerificationDuration)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if err := h.store.CreateAuthToken(ctx, user.ID, models.AuthTokenEmailVerification, hash, expires); err != nil {
-		return err
+		return "", err
 	}
 	link := fmt.Sprintf("%s/verify-email/%s", h.cfg.WebURL, token)
 	body := fmt.Sprintf("Hi %s,\n\nVerify your email by opening this link:\n\n%s\n\nThis link expires in 24 hours.\n", user.Name, link)
-	return h.mailer.Send(user.Email, "Verify your email", body)
+	if err := h.mailer.Send(user.Email, "Verify your email", body); err != nil {
+		return link, err
+	}
+	if !h.mailer.Enabled() {
+		return link, nil
+	}
+	return "", nil
 }
 
 func (h *AuthHandler) sendPasswordResetEmail(ctx context.Context, user *models.User) error {

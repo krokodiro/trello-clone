@@ -41,6 +41,17 @@ services:
         generateValue: true
       - key: ADMIN_NAME
         value: Admin
+      # Optional — set in Render dashboard for real verification emails (see DEPLOY.md)
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM
+        sync: false
 
   - type: web
     name: trello-web

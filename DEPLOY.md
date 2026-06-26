@@ -31,6 +31,22 @@ Save each service — Render redeploys automatically.
    Should return `{"status":"ok"}`.
 3. Register or sign in on the web URL.
 
+## Email verification (SMTP)
+
+Registration sends a verification email. Without SMTP configured, the API logs `[email] SMTP not configured` and the **verify-email** page shows a direct verification link instead.
+
+To send real emails on Render, add these on **trello-api** → **Environment**:
+
+| Variable | Example (Resend) |
+|----------|------------------|
+| `SMTP_HOST` | `smtp.resend.com` |
+| `SMTP_PORT` | `587` |
+| `SMTP_USER` | `resend` |
+| `SMTP_PASSWORD` | your Resend API key |
+| `SMTP_FROM` | `Your App <onboarding@yourdomain.com>` |
+
+Use a verified sender domain in Resend (or another SMTP provider). Redeploy **trello-api** after saving.
+
 ## Admin login
 
 **trello-api** → **Environment** → `ADMIN_EMAIL` / `ADMIN_PASSWORD` (auto-generated).
@@ -41,6 +57,7 @@ Save each service — Render redeploys automatically.
 - **`/api/config` shows `"mode":"proxy"`** → set `API_PUBLIC_URL` on trello-web and redeploy.
 - **WebSockets / live updates broken** → set `WS_PUBLIC_URL` to `wss://` + same host as API.
 - **Free tier cold start** → first request after idle can take ~30s.
+- **Can't verify email after register** → configure SMTP above, or use the link shown on the verify-email page when SMTP is off.
 
 ## Local production
 

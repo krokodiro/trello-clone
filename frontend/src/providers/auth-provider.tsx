@@ -13,12 +13,14 @@ import type { TokenPair, User } from "@/lib/types";
 type AuthContextType = {
   user: User | null;
   loading: boolean;
+  verificationUrl: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   setAuthFromTokens: (tokens: TokenPair) => Promise<void>;
-  resendVerification: (email: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<string | undefined>;
   refreshUser: () => Promise<void>;
+  clearVerificationUrl: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -26,6 +28,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
 
   const fetchMe = useCallback(async () => {
     try {
@@ -57,20 +60,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (email: string, password: string, name: string) => {
-    const data = await api<{ user: User; tokens: TokenPair }>("/auth/register", {
+    const data = await api<{
+      user: User;
+      tokens: TokenPair;
+      verification_url?: string;
+    }>("/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password, name }),
     });
     setTokens(data.tokens.access_token, data.tokens.refresh_token);
     setUser(data.user);
+    setVerificationUrl(data.verification_url ?? null);
   };
 
   const resendVerification = async (email: string) => {
-    await api("/auth/resend-verification", {
-      method: "POST",
-      body: JSON.stringify({ email }),
-    });
+    const data = await api<{ message: string; verification_url?: string }>(
+      "/auth/resend-verification",
+      {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      }
+    );
+    if (data.verification_url) {
+      setVerificationUrl(data.verification_url);
+    }
+    return data.verification_url;
   };
+
+  const clearVerificationUrl = () => setVerificationUrl(null);
 
   const refreshUser = async () => {
     await fetchMe();
@@ -83,7 +100,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, setAuthFromTokens, resendVerification, refreshUser }}
+      value={{
+        user,
+        loading,
+        verificationUrl,
+        login,
+        register,
+        logout,
+        setAuthFromTokens,
+        resendVerification,
+        refreshUser,
+        clearVerificationUrl,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -23,7 +23,7 @@ export default function VerifyEmailPage() {
 }
 
 function VerifyEmailContent() {
-  const { user, loading, resendVerification, logout } = useAuth();
+  const { user, loading, verificationUrl, resendVerification, logout } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = getRedirectPath(searchParams.toString());
@@ -73,6 +73,17 @@ function VerifyEmailContent() {
       <p className="text-center text-sm text-muted">
         We sent a link to <strong className="text-foreground">{user.email}</strong>
       </p>
+      {verificationUrl && (
+        <Alert variant="success">
+          <p className="mb-2 text-sm">Email is not configured on this server. Use this link to verify:</p>
+          <a
+            href={verificationUrl}
+            className="break-all text-sm font-medium text-primary hover:underline"
+          >
+            {verificationUrl}
+          </a>
+        </Alert>
+      )}
       {message && <Alert variant="success">{message}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
       <div className="mt-4 flex flex-col gap-2">

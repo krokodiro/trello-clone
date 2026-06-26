@@ -30,9 +30,13 @@ func New(cfg *config.Config) *Mailer {
 	}
 }
 
+func (m *Mailer) Enabled() bool {
+	return m.enabled
+}
+
 func (m *Mailer) Send(to, subject, body string) error {
 	if !m.enabled {
-		log.Printf("[email] SMTP not configured — would send to %s\nSubject: %s\n%s", to, subject, body)
+		log.Printf("[email] SMTP not configured — would send to %s: %s", to, subject)
 		return nil
 	}
 
