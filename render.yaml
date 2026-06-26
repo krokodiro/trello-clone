@@ -1,0 +1,60 @@
+# One-click deploy on Render (free tier).
+# 1. Push this repo to GitHub
+# 2. Open https://dashboard.render.com/blueprint/new
+# 3. Connect the repo — Render creates all services below
+# 4. After deploy, open trello-api → Environment and set WEB_URL to your trello-web URL (e.g. https://trello-web-xxxx.onrender.com)
+
+databases:
+  - name: trello-db
+    plan: free
+    databaseName: trello
+    user: trello
+
+services:
+  - type: keyvalue
+    name: trello-redis
+    plan: free
+    ipAllowList: []
+
+  - type: web
+    name: trello-api
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trello-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: trello-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: WEB_URL
+        sync: false
+      - key: SEED_ADMIN
+        value: "true"
+      - key: ADMIN_EMAIL
+        value: admin@example.com
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: ADMIN_NAME
+        value: Admin
+
+  - type: web
+    name: trello-web
+    runtime: docker
+    dockerfilePath: frontend/Dockerfile
+    dockerContext: frontend
+    plan: free
+    envVars:
+      - key: API_URL
+        fromService:
+          type: web
+          name: trello-api
+          property: hostport

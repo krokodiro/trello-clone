@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4f5f7;
+  --foreground: #172b4d;
+  --muted: #5e6c84;
+  --border: #dfe1e6;
+  --surface: #ffffff;
+  --primary: #0052cc;
+  --primary-hover: #0747a6;
+  --board-from: #0079bf;
+  --board-to: #5067c5;
+  --column: #ebecf0;
+  --success: #00875a;
+  --danger: #de350b;
+  --shadow-sm: 0 1px 2px rgb(9 30 66 / 12%);
+  --shadow-md: 0 4px 12px rgb(9 30 66 / 15%);
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --font-sans: "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.board-bg {
+  background: linear-gradient(160deg, var(--board-from) 0%, var(--board-to) 100%);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.75rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-enter {
+  animation: toast-in 0.18s ease-out;
+}
+
+.toast-viewport {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 99999;
+  display: flex;
+  width: min(100vw - 2rem, 24rem);
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.toast-item {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  background: var(--surface);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-md);
+}
+
+.toast-accent-info {
+  border-left-color: var(--primary);
+}
+
+.toast-accent-success {
+  border-left-color: var(--success);
+}
+
+.toast-accent-error {
+  border-left-color: var(--danger);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(9 30 66 / 20%);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(9 30 66 / 35%);
+}

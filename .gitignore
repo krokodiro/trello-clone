@@ -1,0 +1,8 @@
+node_modules/
+.next/
+dist/
+.env
+.env.local
+*.exe
+backend/tmp/
+.DS_Store
