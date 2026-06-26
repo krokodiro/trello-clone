@@ -32,7 +32,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: WEB_URL
-        sync: false
+        value: https://trello-web-o15c.onrender.com
       - key: SEED_ADMIN
         value: "true"
       - key: ADMIN_EMAIL
@@ -49,6 +49,6 @@ services:
     plan: free
     envVars:
       - key: API_PUBLIC_URL
-        sync: false
+        value: https://trello-api-8oul.onrender.com
       - key: WS_PUBLIC_URL
-        sync: false
+        value: wss://trello-api-8oul.onrender.com
