@@ -1,9 +1,8 @@
-import { getClientConfig } from "@/lib/runtime-config";
+import { getClientConfig, loadClientConfig } from "@/lib/runtime-config";
 
-function requestBase() {
-  const { apiUrl } = getClientConfig();
-  if (apiUrl) return apiUrl;
-  // Local/docker: same-origin proxy at /api/v1/*
+async function requestBase() {
+  const cfg = await loadClientConfig();
+  if (cfg.apiUrl) return cfg.apiUrl;
   if (typeof window !== "undefined") return "";
   return process.env.API_PUBLIC_URL || process.env.API_URL || "http://localhost:8080";
 }
@@ -46,7 +45,7 @@ export function getAccessToken() {
 async function refreshAccessToken(): Promise<boolean> {
   loadTokens();
   if (!refreshToken) return false;
-  const base = requestBase();
+  const base = await requestBase();
   const res = await fetch(`${base}/api/v1/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,7 +73,11 @@ export async function api<T>(
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  const base = requestBase();
+  const base = await requestBase();
+  if (!base) {
+    throw new Error("API URL is not configured. Set API_PUBLIC_URL on the web service.");
+  }
+
   let res = await fetch(`${base}/api/v1${path}`, { ...options, headers });
 
   if (res.status === 401 && refreshToken) {
@@ -95,8 +98,10 @@ export async function api<T>(
 }
 
 export function getApiUrl() {
-  const base = requestBase();
-  return base || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8080");
+  const { apiUrl } = getClientConfig();
+  if (apiUrl) return apiUrl;
+  if (typeof window !== "undefined") return window.location.origin;
+  return "http://localhost:8080";
 }
 
 export function getWsUrl() {

@@ -15,8 +15,10 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG API_URL=http://localhost:8080
-ENV API_URL=$API_URL
+ARG API_PUBLIC_URL=
+ARG WS_PUBLIC_URL=
+ENV NEXT_PUBLIC_API_URL=$API_PUBLIC_URL
+ENV NEXT_PUBLIC_WS_URL=$WS_PUBLIC_URL
 RUN npm run build
 
 FROM node:22-alpine AS runner

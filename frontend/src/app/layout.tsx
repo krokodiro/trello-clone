@@ -17,14 +17,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const config = getServerAppConfig();
-  const configScript = `window.__APP_CONFIG__=${JSON.stringify(config)}`;
 
   return (
     <html lang="en" className="h-full">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: configScript }} />
-      </head>
       <body className="flex min-h-full flex-col bg-background text-foreground">
+        <div
+          id="app-config"
+          hidden
+          data-api-url={config.apiUrl}
+          data-ws-url={config.wsUrl}
+        />
         <QueryProvider>
           <ToastProvider>
             <AuthProvider>

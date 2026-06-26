@@ -55,12 +55,14 @@ services:
       dockerfile: Dockerfile
       target: runner
       args:
-        API_URL: http://api:8080
+        API_PUBLIC_URL: http://localhost:8080
+        WS_PUBLIC_URL: ws://localhost:8080
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      API_URL: http://api:8080
+      API_PUBLIC_URL: http://localhost:8080
+      WS_PUBLIC_URL: ws://localhost:8080
     depends_on:
       - api
 
