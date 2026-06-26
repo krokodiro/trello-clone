@@ -19,8 +19,7 @@ services:
   - type: web
     name: trello-api
     runtime: docker
-    dockerfilePath: backend/Dockerfile
-    dockerContext: backend
+    rootDir: backend
     plan: free
     healthCheckPath: /health
     envVars:
@@ -49,8 +48,7 @@ services:
   - type: web
     name: trello-web
     runtime: docker
-    dockerfilePath: frontend/Dockerfile
-    dockerContext: frontend
+    rootDir: frontend
     plan: free
     envVars:
       - key: API_URL

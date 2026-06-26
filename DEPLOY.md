@@ -22,10 +22,12 @@ git push -u origin main
 
 ### 2. Deploy on Render
 
-1. Open **[Create Blueprint](https://dashboard.render.com/blueprint/new)**
+1. Open **[Create Blueprint](https://dashboard.render.com/blueprint/new?repo=https://github.com/krokodiro/trello-clone)**
 2. Connect your GitHub account and select the `trello-clone` repository
 3. Click **Apply** — Render creates Postgres, Redis, API, and Web services
 4. Wait for all services to finish deploying (first build takes ~5–10 min)
+
+If services already exist with wrong paths, open each web service → **Settings** → set **Root Directory** to `backend` or `frontend`, then **Manual Deploy**.
 
 ### 3. One-time config after first deploy
 
