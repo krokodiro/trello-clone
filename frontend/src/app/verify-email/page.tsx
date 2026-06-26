@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { getRedirectPath } from "@/lib/redirect";
 import { Alert, AuthShell, Button, Spinner } from "@/components/ui";
+import { VerificationLinkAlert } from "@/components/verification-link-alert";
 
 export default function VerifyEmailPage() {
   return (
@@ -47,8 +48,12 @@ function VerifyEmailContent() {
     setError("");
     setMessage("");
     try {
-      await resendVerification(user.email);
-      setMessage("Verification email sent. Check your inbox.");
+      const url = await resendVerification(user.email);
+      setMessage(
+        url
+          ? "Use the verification link below."
+          : "Verification email sent. Check your inbox."
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send email");
     } finally {
@@ -73,17 +78,7 @@ function VerifyEmailContent() {
       <p className="text-center text-sm text-muted">
         We sent a link to <strong className="text-foreground">{user.email}</strong>
       </p>
-      {verificationUrl && (
-        <Alert variant="success">
-          <p className="mb-2 text-sm">Email is not configured on this server. Use this link to verify:</p>
-          <a
-            href={verificationUrl}
-            className="break-all text-sm font-medium text-primary hover:underline"
-          >
-            {verificationUrl}
-          </a>
-        </Alert>
-      )}
+      {verificationUrl && <VerificationLinkAlert url={verificationUrl} />}
       {message && <Alert variant="success">{message}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
       <div className="mt-4 flex flex-col gap-2">

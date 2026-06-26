@@ -8,6 +8,7 @@ import { getApiUrl } from "@/lib/api";
 import { getRedirectPath, withRedirect } from "@/lib/redirect";
 import { mutationError } from "@/lib/toast-utils";
 import { Alert, AuthShell, Button, FieldLabel, Input } from "@/components/ui";
+import { VerificationLinkAlert } from "@/components/verification-link-alert";
 import { useToast } from "@/providers/toast-provider";
 
 export default function LoginPage() {
@@ -25,7 +26,7 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const { login, resendVerification } = useAuth();
+  const { login, resendVerification, verificationUrl } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,8 +73,12 @@ function LoginForm() {
     setResending(true);
     setResendMessage("");
     try {
-      await resendVerification(email);
-      setResendMessage("Verification email sent.");
+      const url = await resendVerification(email);
+      if (url) {
+        setResendMessage("");
+      } else {
+        setResendMessage("Verification email sent. Check your inbox.");
+      }
     } catch (err) {
       setResendMessage(err instanceof Error ? err.message : "Failed to send email");
     } finally {
@@ -126,6 +131,7 @@ function LoginForm() {
               {resending ? "Sending..." : "Resend verification email"}
             </Button>
             {resendMessage && <Alert variant="info">{resendMessage}</Alert>}
+            {verificationUrl && <VerificationLinkAlert url={verificationUrl} />}
           </div>
         )}
         <Button type="submit" className="w-full" loading={loading}>

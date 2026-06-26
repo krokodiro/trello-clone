@@ -31,21 +31,38 @@ Save each service — Render redeploys automatically.
    Should return `{"status":"ok"}`.
 3. Register or sign in on the web URL.
 
-## Email verification (SMTP)
+## Email verification
 
-Registration sends a verification email. Without SMTP configured, the API logs `[email] SMTP not configured` and the **verify-email** page shows a direct verification link instead.
+Registration sends a verification email. Without email configured, the API shows a direct verification link on the verify-email page.
 
-To send real emails on Render, add these on **trello-api** → **Environment**:
+**Render blocks outbound SMTP (ports 25/587/465).** Gmail and other SMTP providers will fail with `connection timed out` on Render. Use the **Resend HTTP API** instead (works over HTTPS).
 
-| Variable | Example (Resend) |
-|----------|------------------|
-| `SMTP_HOST` | `smtp.resend.com` |
+### Resend on Render (recommended)
+
+On **trello-api** → **Environment**:
+
+| Variable | Value |
+|----------|--------|
+| `RESEND_API_KEY` | your Resend API key (`re_…`) |
+| `EMAIL_FROM` | `Trello Clone <onboarding@resend.dev>` or your verified domain |
+
+Remove `SMTP_HOST` / Gmail vars if set — they are not needed and may confuse troubleshooting. Redeploy **trello-api**.
+
+Logs should show `[email] using Resend HTTP API` and `[email] sent (resend) to …`.
+
+### SMTP (local dev only)
+
+Works on localhost / Docker where outbound SMTP is not blocked:
+
+| Variable | Example (Gmail) |
+|----------|-----------------|
+| `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
-| `SMTP_USER` | `resend` |
-| `SMTP_PASSWORD` | your Resend API key |
-| `SMTP_FROM` | `Your App <onboarding@yourdomain.com>` |
+| `SMTP_USER` | `you@gmail.com` |
+| `SMTP_PASSWORD` | Google app password |
+| `EMAIL_FROM` | `Trello Clone <you@gmail.com>` |
 
-Use a verified sender domain in Resend (or another SMTP provider). Redeploy **trello-api** after saving.
+Do **not** set `RESEND_API_KEY` locally if you want to test SMTP.
 
 ## Admin login
 
@@ -57,7 +74,10 @@ Use a verified sender domain in Resend (or another SMTP provider). Redeploy **tr
 - **`/api/config` shows `"mode":"proxy"`** → set `API_PUBLIC_URL` on trello-web and redeploy.
 - **WebSockets / live updates broken** → set `WS_PUBLIC_URL` to `wss://` + same host as API.
 - **Free tier cold start** → first request after idle can take ~30s.
-- **Can't verify email after register** → configure SMTP above, or use the link shown on the verify-email page when SMTP is off.
+- **Can't verify email after register** → configure SMTP above, or on the login page enter your email/password, click **Resend verification email**, and use the link shown when SMTP is off. The API also logs the link as `[email] SMTP not configured — verification link for ...`.
+- **SMTP configured but no email** → on Render, SMTP is blocked; switch to `RESEND_API_KEY`. Check logs for `[email] send failed`.
+- **Gmail `connection timed out`** → Render blocks port 587; use Resend HTTP API instead of Gmail SMTP.
+- **502 on resend/register** → often cold start; wait and retry, or check API logs after redeploy.
 
 ## Local production
 

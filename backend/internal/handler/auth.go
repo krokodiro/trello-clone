@@ -95,7 +95,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusInternalServerError, "failed to create user")
 		return
 	}
-	link, err := h.sendVerificationEmail(r.Context(), user)
+	link, sent, err := h.sendVerificationEmail(r.Context(), user)
 	if err != nil {
 		log.Printf("verification email error: %v", err)
 	}
@@ -107,10 +107,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]interface{}{
 		"user":              sanitizeUser(user),
 		"tokens":            pair,
-		"verification_sent": h.mailer.Enabled(),
+		"verification_sent": sent,
 		"email_verified":    false,
 	}
-	if link != "" && !h.mailer.Enabled() {
+	if link != "" && !sent {
 		resp["verification_url"] = link
 	}
 	JSON(w, http.StatusCreated, resp)
@@ -197,16 +197,11 @@ func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request)
 		JSON(w, http.StatusOK, map[string]string{"message": "email already verified"})
 		return
 	}
-	if link, err := h.sendVerificationEmail(r.Context(), user); err != nil {
+	link, sent, err := h.sendVerificationEmail(r.Context(), user)
+	if err != nil {
 		log.Printf("verification email error: %v", err)
-	} else if link != "" && !h.mailer.Enabled() {
-		JSON(w, http.StatusOK, map[string]string{
-			"message":          "if the account exists, a verification email has been sent",
-			"verification_url": link,
-		})
-		return
 	}
-	JSON(w, http.StatusOK, map[string]string{"message": "if the account exists, a verification email has been sent"})
+	JSON(w, http.StatusOK, verificationPayload(link, sent, "if the account exists, a verification email has been sent"))
 }
 
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -268,23 +263,33 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	JSON(w, http.StatusOK, map[string]string{"message": "password updated"})
 }
 
-func (h *AuthHandler) sendVerificationEmail(ctx context.Context, user *models.User) (string, error) {
+func (h *AuthHandler) sendVerificationEmail(ctx context.Context, user *models.User) (link string, sent bool, err error) {
 	token, hash, expires, err := h.generateAuthToken(emailVerificationDuration)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	if err := h.store.CreateAuthToken(ctx, user.ID, models.AuthTokenEmailVerification, hash, expires); err != nil {
-		return "", err
+		return "", false, err
 	}
-	link := fmt.Sprintf("%s/verify-email/%s", h.cfg.WebURL, token)
+	link = fmt.Sprintf("%s/verify-email/%s", h.cfg.WebURL, token)
 	body := fmt.Sprintf("Hi %s,\n\nVerify your email by opening this link:\n\n%s\n\nThis link expires in 24 hours.\n", user.Name, link)
-	if err := h.mailer.Send(user.Email, "Verify your email", body); err != nil {
-		return link, err
-	}
 	if !h.mailer.Enabled() {
-		return link, nil
+		log.Printf("[email] SMTP not configured — verification link for %s: %s", user.Email, link)
+		return link, false, nil
 	}
-	return "", nil
+	if err := h.mailer.Send(user.Email, "Verify your email", body); err != nil {
+		log.Printf("[email] send failed for %s — verification link: %s (%v)", user.Email, link, err)
+		return link, false, err
+	}
+	return link, true, nil
+}
+
+func verificationPayload(link string, sent bool, message string) map[string]string {
+	resp := map[string]string{"message": message}
+	if link != "" && !sent {
+		resp["verification_url"] = link
+	}
+	return resp
 }
 
 func (h *AuthHandler) sendPasswordResetEmail(ctx context.Context, user *models.User) error {

@@ -25,10 +25,28 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const VERIFICATION_URL_KEY = "verification_url";
+
+function readStoredVerificationUrl() {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(VERIFICATION_URL_KEY);
+}
+
+function persistVerificationUrl(url: string | null) {
+  if (typeof window === "undefined") return;
+  if (url) sessionStorage.setItem(VERIFICATION_URL_KEY, url);
+  else sessionStorage.removeItem(VERIFICATION_URL_KEY);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [verificationUrl, setVerificationUrl] = useState<string | null>(null);
+  const [verificationUrl, setVerificationUrlState] = useState<string | null>(null);
+
+  const setVerificationUrl = (url: string | null) => {
+    setVerificationUrlState(url);
+    persistVerificationUrl(url);
+  };
 
   const fetchMe = useCallback(async () => {
     try {
@@ -42,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadTokens();
+    setVerificationUrlState(readStoredVerificationUrl());
     fetchMe().finally(() => setLoading(false));
   }, [fetchMe]);
 
@@ -96,6 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     clearTokens();
     setUser(null);
+    setVerificationUrl(null);
   };
 
   return (

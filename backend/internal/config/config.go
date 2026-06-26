@@ -13,6 +13,11 @@ func Load() *Config {
 	}
 
 	smtpPassword := strings.ReplaceAll(os.Getenv("SMTP_PASSWORD"), " ", "")
+	resendKey := strings.TrimSpace(os.Getenv("RESEND_API_KEY"))
+	if resendKey == "" && strings.HasPrefix(smtpPassword, "re_") && os.Getenv("SMTP_HOST") == "smtp.resend.com" {
+		// Allow Resend API key via SMTP_PASSWORD when host is smtp.resend.com.
+		resendKey = smtpPassword
+	}
 
 	return &Config{
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://trello:trello@localhost:5432/trello?sslmode=disable"),
@@ -29,6 +34,8 @@ func Load() *Config {
 		SMTPUser:           os.Getenv("SMTP_USER"),
 		SMTPPassword:       smtpPassword,
 		SMTPFrom:           smtpFrom(),
+		ResendAPIKey:       resendKey,
+		EmailFrom:          emailFrom(),
 		Port:               getEnv("PORT", "8080"),
 		SeedAdmin:          getEnv("SEED_ADMIN", "true") == "true",
 		AdminEmail:         getEnv("ADMIN_EMAIL", "admin@example.com"),
@@ -90,6 +97,16 @@ func smtpFrom() string {
 	if user := os.Getenv("SMTP_USER"); user != "" {
 		return user
 	}
+	return ""
+}
+
+func emailFrom() string {
+	if from := os.Getenv("EMAIL_FROM"); from != "" {
+		return from
+	}
+	if from := smtpFrom(); from != "" {
+		return from
+	}
 	return "noreply@localhost"
 }
 
@@ -108,6 +125,8 @@ type Config struct {
 	SMTPUser           string
 	SMTPPassword       string
 	SMTPFrom           string
+	ResendAPIKey       string
+	EmailFrom          string
 	Port               string
 	SeedAdmin          bool
 	AdminEmail         string
