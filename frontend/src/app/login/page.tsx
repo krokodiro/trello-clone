@@ -7,7 +7,7 @@ import { useAuth } from "@/providers/auth-provider";
 import { getRedirectPath, withRedirect } from "@/lib/redirect";
 import { mutationError } from "@/lib/toast-utils";
 import { Alert, AuthShell, Button, FieldLabel, Input } from "@/components/ui";
-import { VerificationLinkAlert } from "@/components/verification-link-alert";
+import { AuthLinkAlert } from "@/components/auth-link-alert";
 import { useToast } from "@/providers/toast-provider";
 
 export default function LoginPage() {
@@ -130,7 +130,12 @@ function LoginForm() {
               {resending ? "Sending..." : "Resend verification email"}
             </Button>
             {resendMessage && <Alert variant="info">{resendMessage}</Alert>}
-            {verificationUrl && <VerificationLinkAlert url={verificationUrl} />}
+            {verificationUrl && (
+              <AuthLinkAlert
+                url={verificationUrl}
+                description="Email is not configured on this server. Open this link to verify your account:"
+              />
+            )}
           </div>
         )}
         <Button type="submit" className="w-full" loading={loading}>

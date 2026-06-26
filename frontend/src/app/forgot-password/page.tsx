@@ -3,11 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { AuthLinkAlert } from "@/components/auth-link-alert";
 import { Alert, AuthShell, Button, FieldLabel, Input } from "@/components/ui";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [resetUrl, setResetUrl] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -15,13 +17,22 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError("");
     setMessage("");
+    setResetUrl(null);
     setLoading(true);
     try {
-      await api("/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      setMessage("If an account exists for that email, we sent a reset link.");
+      const data = await api<{ message: string; reset_url?: string }>(
+        "/auth/forgot-password",
+        {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        }
+      );
+      if (data.reset_url) {
+        setMessage("Email is not configured. Use this link to reset your password:");
+        setResetUrl(data.reset_url);
+      } else {
+        setMessage("If an account exists for that email, we sent a reset link.");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
     } finally {
@@ -45,6 +56,12 @@ export default function ForgotPasswordPage() {
           />
         </div>
         {message && <Alert variant="success">{message}</Alert>}
+        {resetUrl && (
+          <AuthLinkAlert
+            url={resetUrl}
+            description="Open this link to choose a new password (expires in 1 hour):"
+          />
+        )}
         {error && <Alert variant="error">{error}</Alert>}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Sending..." : "Send reset link"}

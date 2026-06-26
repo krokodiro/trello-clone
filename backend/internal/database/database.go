@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -24,6 +25,10 @@ func Connect(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 }
 
 func RunMigrations(databaseURL string) error {
+	return RunMigrationsFrom(databaseURL, "migrations")
+}
+
+func RunMigrationsFrom(databaseURL, migrationsDir string) error {
 	// The pgx/v5 migrate driver registers under the "pgx5" scheme, so rewrite
 	// the standard postgres:// URL (used by pgxpool) to match.
 	migrateURL := databaseURL
@@ -33,7 +38,7 @@ func RunMigrations(databaseURL string) error {
 		migrateURL = "pgx5://" + rest
 	}
 
-	m, err := migrate.New("file://migrations", migrateURL)
+	m, err := migrate.New("file://"+filepath.ToSlash(migrationsDir), migrateURL)
 	if err != nil {
 		return fmt.Errorf("create migrate instance: %w", err)
 	}

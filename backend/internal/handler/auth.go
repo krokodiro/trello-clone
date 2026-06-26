@@ -206,13 +206,16 @@ func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		Error(w, http.StatusBadRequest, "email is required")
 		return
 	}
+	var link string
+	var sent bool
 	user, err := h.store.GetUserByEmail(r.Context(), req.Email)
 	if err == nil && user != nil && user.PasswordHash != nil {
-		if err := h.sendPasswordResetEmail(r.Context(), user); err != nil {
+		link, sent, err = h.sendPasswordResetEmail(r.Context(), user)
+		if err != nil {
 			log.Printf("password reset email error: %v", err)
 		}
 	}
-	JSON(w, http.StatusOK, map[string]string{"message": "if the account exists, a reset email has been sent"})
+	JSON(w, http.StatusOK, authLinkPayload(link, sent, "reset_url", "if the account exists, a reset email has been sent"))
 }
 
 func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
@@ -281,24 +284,36 @@ func (h *AuthHandler) sendVerificationEmail(ctx context.Context, user *models.Us
 }
 
 func verificationPayload(link string, sent bool, message string) map[string]string {
+	return authLinkPayload(link, sent, "verification_url", message)
+}
+
+func authLinkPayload(link string, sent bool, urlKey, message string) map[string]string {
 	resp := map[string]string{"message": message}
 	if link != "" && !sent {
-		resp["verification_url"] = link
+		resp[urlKey] = link
 	}
 	return resp
 }
 
-func (h *AuthHandler) sendPasswordResetEmail(ctx context.Context, user *models.User) error {
+func (h *AuthHandler) sendPasswordResetEmail(ctx context.Context, user *models.User) (link string, sent bool, err error) {
 	token, hash, expires, err := h.generateAuthToken(passwordResetDuration)
 	if err != nil {
-		return err
+		return "", false, err
 	}
 	if err := h.store.CreateAuthToken(ctx, user.ID, models.AuthTokenPasswordReset, hash, expires); err != nil {
-		return err
+		return "", false, err
 	}
-	link := fmt.Sprintf("%s/reset-password/%s", h.cfg.WebURL, token)
+	link = fmt.Sprintf("%s/reset-password/%s", h.cfg.WebURL, token)
 	body := fmt.Sprintf("Hi %s,\n\nReset your password by opening this link:\n\n%s\n\nThis link expires in 1 hour. If you did not request this, you can ignore this email.\n", user.Name, link)
-	return h.mailer.Send(user.Email, "Reset your password", body)
+	if !h.mailer.Enabled() {
+		log.Printf("[email] not configured — password reset link for %s: %s", user.Email, link)
+		return link, false, nil
+	}
+	if err := h.mailer.Send(user.Email, "Reset your password", body); err != nil {
+		log.Printf("[email] send failed for %s — password reset link: %s (%v)", user.Email, link, err)
+		return link, false, err
+	}
+	return link, true, nil
 }
 
 func (h *AuthHandler) generateAuthToken(duration time.Duration) (string, string, time.Time, error) {

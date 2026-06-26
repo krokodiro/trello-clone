@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
 import { getRedirectPath } from "@/lib/redirect";
 import { Alert, AuthShell, Button, Spinner } from "@/components/ui";
-import { VerificationLinkAlert } from "@/components/verification-link-alert";
+import { AuthLinkAlert } from "@/components/auth-link-alert";
 
 export default function VerifyEmailPage() {
   return (
@@ -78,7 +78,12 @@ function VerifyEmailContent() {
       <p className="text-center text-sm text-muted">
         We sent a link to <strong className="text-foreground">{user.email}</strong>
       </p>
-      {verificationUrl && <VerificationLinkAlert url={verificationUrl} />}
+      {verificationUrl && (
+        <AuthLinkAlert
+          url={verificationUrl}
+          description="Email is not configured on this server. Open this link to verify your account:"
+        />
+      )}
       {message && <Alert variant="success">{message}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
       <div className="mt-4 flex flex-col gap-2">

@@ -18,6 +18,7 @@ import (
 	"github.com/trello-clone/backend/internal/email"
 	"github.com/trello-clone/backend/internal/handler"
 	authmw "github.com/trello-clone/backend/internal/middleware"
+	"github.com/trello-clone/backend/internal/openapi"
 	"github.com/trello-clone/backend/internal/seed"
 	"github.com/trello-clone/backend/internal/store"
 	"github.com/trello-clone/backend/internal/ws"
@@ -73,6 +74,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	openapi.Register(r)
 
 	r.Get("/ws", hub.HandleWS)
 	r.Get("/ws/notifications", hub.HandleUserWS)

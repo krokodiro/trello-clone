@@ -50,6 +50,7 @@ npm run dev
 | Area | Endpoints |
 |------|-----------|
 | Auth | `POST /api/v1/auth/register`, `/login`, `/refresh`, `GET /auth/me` |
+| Docs | Swagger UI at `/api/docs`, OpenAPI spec at `/api/openapi.yaml` |
 | Workspaces | CRUD + members + invitations |
 | Boards | CRUD, lists, tasks, comments, labels, assignees |
 | Real-time | `WS /ws?board_id=...&token=...` |
@@ -67,3 +68,30 @@ trello-clone/
 ## Environment variables
 
 See [`.env.example`](.env.example).
+
+## Tests
+
+### Backend unit tests (no database)
+
+```bash
+cd backend
+go test ./...
+```
+
+### Backend integration tests (requires PostgreSQL)
+
+Start Postgres (`docker compose up postgres -d`), then:
+
+```bash
+cd backend
+go test -tags=integration ./...
+```
+
+Optional: `TEST_DATABASE_URL=postgres://...` (defaults to `postgres://trello:trello@localhost:5432/trello?sslmode=disable`).
+
+### Frontend unit tests
+
+```bash
+cd frontend
+npm test
+```

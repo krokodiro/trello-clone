@@ -29,7 +29,8 @@ Save each service — Render redeploys automatically.
    You should see `"mode":"direct"` and your API URL.
 2. Open `https://YOUR-trello-api.onrender.com/health`  
    Should return `{"status":"ok"}`.
-3. Register or sign in on the web URL.
+3. API docs: `https://YOUR-trello-api.onrender.com/api/docs`
+4. Register or sign in on the web URL.
 
 ## Email verification
 
@@ -79,7 +80,8 @@ Do **not** set `RESEND_API_KEY` locally if you want to test SMTP.
 - **`/api/config` shows `"mode":"proxy"`** → set `API_PUBLIC_URL` on trello-web and redeploy.
 - **WebSockets / live updates broken** → set `WS_PUBLIC_URL` to `wss://` + same host as API.
 - **Free tier cold start** → first request after idle can take ~30s.
-- **Can't verify email after register** → configure SMTP above, or on the login page enter your email/password, click **Resend verification email**, and use the link shown when SMTP is off. The API also logs the link as `[email] SMTP not configured — verification link for ...`.
+- **Can't verify email after register** → configure email above, or use the verification link shown on the login/verify-email page when email is off.
+- **Can't reset password without email** → use **Forgot password**; when email is off, the reset link is shown on that page (also logged in API as `password reset link for ...`).
 - **Resend `403 validation_error`** → `@resend.dev` only sends to your Resend account email; verify a domain and update `EMAIL_FROM`, or use the in-app verification link.
 - **SMTP configured but no email** → on Render, SMTP is blocked; switch to `RESEND_API_KEY`. Check logs for `[email] send failed`.
 - **Gmail `connection timed out`** → Render blocks port 587; use Resend HTTP API instead of Gmail SMTP.
