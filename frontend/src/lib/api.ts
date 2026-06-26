@@ -1,10 +1,8 @@
-function publicApiUrl() {
+function requestBase() {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   if (typeof window !== "undefined") return "";
   return process.env.API_URL || "http://localhost:8080";
 }
-
-const API_URL = publicApiUrl();
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
@@ -44,7 +42,7 @@ export function getAccessToken() {
 async function refreshAccessToken(): Promise<boolean> {
   loadTokens();
   if (!refreshToken) return false;
-  const res = await fetch(`${API_URL}/api/v1/auth/refresh`, {
+  const res = await fetch(`${requestBase()}/api/v1/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -71,13 +69,14 @@ export async function api<T>(
     headers.Authorization = `Bearer ${accessToken}`;
   }
 
-  let res = await fetch(`${API_URL}/api/v1${path}`, { ...options, headers });
+  const base = requestBase();
+  let res = await fetch(`${base}/api/v1${path}`, { ...options, headers });
 
   if (res.status === 401 && refreshToken) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
       headers.Authorization = `Bearer ${getAccessToken()}`;
-      res = await fetch(`${API_URL}/api/v1${path}`, { ...options, headers });
+      res = await fetch(`${base}/api/v1${path}`, { ...options, headers });
     }
   }
 
@@ -91,15 +90,15 @@ export async function api<T>(
 }
 
 export function getApiUrl() {
-  return publicApiUrl() || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8080");
+  const base = requestBase();
+  return base || (typeof window !== "undefined" ? window.location.origin : "http://localhost:8080");
 }
 
 export function getWsUrl() {
   if (process.env.NEXT_PUBLIC_WS_URL) return process.env.NEXT_PUBLIC_WS_URL;
   if (typeof window !== "undefined") {
-    const api = process.env.NEXT_PUBLIC_API_URL;
-    if (api) {
-      return api.replace(/^http/, "ws");
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL.replace(/^http/, "ws");
     }
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${proto}//${window.location.host}`;

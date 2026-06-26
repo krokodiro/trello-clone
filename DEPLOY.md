@@ -31,9 +31,14 @@ If services already exist with wrong paths, open each web service → **Settings
 
 ### 3. One-time config after first deploy
 
-1. Open the **trello-web** service and copy its URL (e.g. `https://trello-web-xxxx.onrender.com`)
-2. Open **trello-api** → **Environment** → set `WEB_URL` to that URL
-3. Save — Render redeploys the API automatically
+1. Open **trello-web** and copy its URL (e.g. `https://trello-web-xxxx.onrender.com`)
+2. Open **trello-api** → **Environment**:
+   - Set `WEB_URL` to the trello-web URL
+   - Copy the trello-api URL (e.g. `https://trello-api-xxxx.onrender.com`)
+3. Open **trello-web** → **Environment**:
+   - Set `NEXT_PUBLIC_WS_URL` to `wss://YOUR-trello-api.onrender.com` (same host as API, `wss://` prefix)
+   - If register/login still fails, set `API_URL` to `https://YOUR-trello-api.onrender.com` (public URL fallback)
+4. Save — Render redeploys automatically
 
 ### 4. Sign in
 
