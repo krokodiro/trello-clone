@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/providers/auth-provider";
-import { getApiUrl } from "@/lib/api";
 import { getRedirectPath, withRedirect } from "@/lib/redirect";
 import { mutationError } from "@/lib/toast-utils";
 import { Alert, AuthShell, Button, FieldLabel, Input } from "@/components/ui";
@@ -138,23 +137,6 @@ function LoginForm() {
           Sign in
         </Button>
       </form>
-      <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted">or continue with</span>
-        <div className="h-px flex-1 bg-border" />
-      </div>
-      <div className="flex flex-col gap-2">
-        <a href={`${getApiUrl()}/api/v1/auth/google`}>
-          <Button variant="secondary" className="w-full" type="button">
-            Google
-          </Button>
-        </a>
-        <a href={`${getApiUrl()}/api/v1/auth/github`}>
-          <Button variant="secondary" className="w-full" type="button">
-            GitHub
-          </Button>
-        </a>
-      </div>
       <p className="mt-6 text-center text-sm text-muted">
         No account?{" "}
         <Link href={withRedirect("/register", redirect)} className="font-medium text-primary hover:underline">

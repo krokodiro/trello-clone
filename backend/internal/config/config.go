@@ -25,10 +25,6 @@ func Load() *Config {
 		JWTSecret:          getEnv("JWT_SECRET", "dev-secret-change-in-production"),
 		WebURL:             strings.TrimRight(getEnv("WEB_URL", "http://localhost:3000"), "/"),
 		APIURL:             apiURL(),
-		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
-		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		GitHubClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-		GitHubClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
 		SMTPHost:           os.Getenv("SMTP_HOST"),
 		SMTPPort:           getEnv("SMTP_PORT", "587"),
 		SMTPUser:           os.Getenv("SMTP_USER"),
@@ -116,10 +112,6 @@ type Config struct {
 	JWTSecret          string
 	WebURL             string
 	APIURL             string
-	GoogleClientID     string
-	GoogleClientSecret string
-	GitHubClientID     string
-	GitHubClientSecret string
 	SMTPHost           string
 	SMTPPort           string
 	SMTPUser           string

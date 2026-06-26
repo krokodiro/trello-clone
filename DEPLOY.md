@@ -44,11 +44,16 @@ On **trello-api** → **Environment**:
 | Variable | Value |
 |----------|--------|
 | `RESEND_API_KEY` | your Resend API key (`re_…`) |
-| `EMAIL_FROM` | `Trello Clone <onboarding@resend.dev>` or your verified domain |
+| `EMAIL_FROM` | `Trello Clone <onboarding@resend.dev>` (testing only — see below) |
 
 Remove `SMTP_HOST` / Gmail vars if set — they are not needed and may confuse troubleshooting. Redeploy **trello-api**.
 
 Logs should show `[email] using Resend HTTP API` and `[email] sent (resend) to …`.
+
+**Resend `@resend.dev` testing limit:** with the default sender, Resend only delivers to the email on your Resend account (e.g. `you@gmail.com`). Other recipients get `403 validation_error`. Either:
+
+- **Quick test:** register with your Resend account email, or use the verification link shown in the app when send fails.
+- **Real prod:** verify your domain at [resend.com/domains](https://resend.com/domains), then set `EMAIL_FROM` to e.g. `Trello Clone <noreply@yourdomain.com>`.
 
 ### SMTP (local dev only)
 
@@ -75,6 +80,7 @@ Do **not** set `RESEND_API_KEY` locally if you want to test SMTP.
 - **WebSockets / live updates broken** → set `WS_PUBLIC_URL` to `wss://` + same host as API.
 - **Free tier cold start** → first request after idle can take ~30s.
 - **Can't verify email after register** → configure SMTP above, or on the login page enter your email/password, click **Resend verification email**, and use the link shown when SMTP is off. The API also logs the link as `[email] SMTP not configured — verification link for ...`.
+- **Resend `403 validation_error`** → `@resend.dev` only sends to your Resend account email; verify a domain and update `EMAIL_FROM`, or use the in-app verification link.
 - **SMTP configured but no email** → on Render, SMTP is blocked; switch to `RESEND_API_KEY`. Check logs for `[email] send failed`.
 - **Gmail `connection timed out`** → Render blocks port 587; use Resend HTTP API instead of Gmail SMTP.
 - **502 on resend/register** → often cold start; wait and retry, or check API logs after redeploy.

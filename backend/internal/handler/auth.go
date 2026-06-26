@@ -4,22 +4,18 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/trello-clone/backend/internal/auth"
 	"github.com/trello-clone/backend/internal/config"
 	"github.com/trello-clone/backend/internal/email"
 	"github.com/trello-clone/backend/internal/middleware"
 	"github.com/trello-clone/backend/internal/models"
 	"github.com/trello-clone/backend/internal/store"
-	"golang.org/x/oauth2"
-	githuboauth "golang.org/x/oauth2/github"
 )
 
 const (
@@ -368,146 +364,6 @@ func sanitizeUser(u *models.User) *models.User {
 	return u
 }
 
-func (h *AuthHandler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
-	if h.cfg.GoogleClientID == "" {
-		Error(w, http.StatusNotImplemented, "Google OAuth not configured")
-		return
-	}
-	conf := &oauth2.Config{
-		ClientID:     h.cfg.GoogleClientID,
-		ClientSecret: h.cfg.GoogleClientSecret,
-		RedirectURL:  h.cfg.APIURL + "/auth/google/callback",
-		Scopes:       []string{"openid", "email", "profile"},
-		Endpoint:     oauth2.Endpoint{AuthURL: "https://accounts.google.com/o/oauth2/auth", TokenURL: "https://oauth2.googleapis.com/token"},
-	}
-	state := uuid.New().String()
-	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Value: state, Path: "/", MaxAge: 300, HttpOnly: true})
-	url := conf.AuthCodeURL(state, oauth2.AccessTypeOffline)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
-}
-
-func (h *AuthHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
-	stateCookie, _ := r.Cookie("oauth_state")
-	if stateCookie == nil || r.URL.Query().Get("state") != stateCookie.Value {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_state", http.StatusTemporaryRedirect)
-		return
-	}
-	conf := &oauth2.Config{
-		ClientID:     h.cfg.GoogleClientID,
-		ClientSecret: h.cfg.GoogleClientSecret,
-		RedirectURL:  h.cfg.APIURL + "/auth/google/callback",
-		Scopes:       []string{"openid", "email", "profile"},
-		Endpoint:     oauth2.Endpoint{AuthURL: "https://accounts.google.com/o/oauth2/auth", TokenURL: "https://oauth2.googleapis.com/token"},
-	}
-	tok, err := conf.Exchange(r.Context(), r.URL.Query().Get("code"))
-	if err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
-		return
-	}
-	h.oauthRedirect(w, r, "google", tok.AccessToken, conf)
-}
-
-func (h *AuthHandler) GitHubLogin(w http.ResponseWriter, r *http.Request) {
-	if h.cfg.GitHubClientID == "" {
-		Error(w, http.StatusNotImplemented, "GitHub OAuth not configured")
-		return
-	}
-	conf := h.githubConfig()
-	state := uuid.New().String()
-	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Value: state, Path: "/", MaxAge: 300, HttpOnly: true})
-	http.Redirect(w, r, conf.AuthCodeURL(state), http.StatusTemporaryRedirect)
-}
-
-func (h *AuthHandler) GitHubCallback(w http.ResponseWriter, r *http.Request) {
-	stateCookie, _ := r.Cookie("oauth_state")
-	if stateCookie == nil || r.URL.Query().Get("state") != stateCookie.Value {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_state", http.StatusTemporaryRedirect)
-		return
-	}
-	conf := h.githubConfig()
-	tok, err := conf.Exchange(r.Context(), r.URL.Query().Get("code"))
-	if err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
-		return
-	}
-	client := conf.Client(r.Context(), tok)
-	resp, err := client.Get("https://api.github.com/user")
-	if err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_user", http.StatusTemporaryRedirect)
-		return
-	}
-	defer resp.Body.Close()
-	var ghUser struct {
-		ID        int64  `json:"id"`
-		Login     string `json:"login"`
-		Name      string `json:"name"`
-		Email     string `json:"email"`
-		AvatarURL string `json:"avatar_url"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&ghUser); err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_parse", http.StatusTemporaryRedirect)
-		return
-	}
-	email := ghUser.Email
-	if email == "" {
-		email = fmt.Sprintf("%s@users.noreply.github.com", ghUser.Login)
-	}
-	name := ghUser.Name
-	if name == "" {
-		name = ghUser.Login
-	}
-	h.finishOAuth(w, r, "github", fmt.Sprintf("%d", ghUser.ID), email, name, ghUser.AvatarURL)
-}
-
-func (h *AuthHandler) githubConfig() *oauth2.Config {
-	return &oauth2.Config{
-		ClientID:     h.cfg.GitHubClientID,
-		ClientSecret: h.cfg.GitHubClientSecret,
-		RedirectURL:  h.cfg.APIURL + "/auth/github/callback",
-		Scopes:       []string{"user:email"},
-		Endpoint:     githuboauth.Endpoint,
-	}
-}
-
-func (h *AuthHandler) oauthRedirect(w http.ResponseWriter, r *http.Request, provider, accessToken string, conf *oauth2.Config) {
-	client := conf.Client(r.Context(), &oauth2.Token{AccessToken: accessToken})
-	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
-	if err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_user", http.StatusTemporaryRedirect)
-		return
-	}
-	defer resp.Body.Close()
-	var info struct {
-		ID      string `json:"id"`
-		Email   string `json:"email"`
-		Name    string `json:"name"`
-		Picture string `json:"picture"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_parse", http.StatusTemporaryRedirect)
-		return
-	}
-	h.finishOAuth(w, r, provider, info.ID, info.Email, info.Name, info.Picture)
-}
-
-func (h *AuthHandler) finishOAuth(w http.ResponseWriter, r *http.Request, provider, providerID, email, name, avatar string) {
-	user, err := h.store.FindOrCreateOAuthUser(r.Context(), provider, providerID, email, name, avatar)
-	if err != nil {
-		log.Printf("oauth user error: %v", err)
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_create", http.StatusTemporaryRedirect)
-		return
-	}
-	if user.EmailVerifiedAt == nil {
-		_ = h.store.MarkEmailVerified(r.Context(), user.ID)
-	}
-	pair, err := h.issueTokens(r.Context(), user)
-	if err != nil {
-		http.Redirect(w, r, h.cfg.WebURL+"/login?error=oauth_token", http.StatusTemporaryRedirect)
-		return
-	}
-	http.Redirect(w, r, fmt.Sprintf("%s/auth/callback?access_token=%s&refresh_token=%s", h.cfg.WebURL, pair.AccessToken, pair.RefreshToken), http.StatusTemporaryRedirect)
-}
-
 func RegisterAuthRoutes(r chi.Router, h *AuthHandler, authMw func(http.Handler) http.Handler) {
 	r.Post("/auth/register", h.Register)
 	r.Post("/auth/login", h.Login)
@@ -516,9 +372,5 @@ func RegisterAuthRoutes(r chi.Router, h *AuthHandler, authMw func(http.Handler) 
 	r.Post("/auth/resend-verification", h.ResendVerification)
 	r.Post("/auth/forgot-password", h.ForgotPassword)
 	r.Post("/auth/reset-password", h.ResetPassword)
-	r.Get("/auth/google", h.GoogleLogin)
-	r.Get("/auth/google/callback", h.GoogleCallback)
-	r.Get("/auth/github", h.GitHubLogin)
-	r.Get("/auth/github/callback", h.GitHubCallback)
 	r.With(authMw).Get("/auth/me", h.Me)
 }

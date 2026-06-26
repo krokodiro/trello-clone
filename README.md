@@ -9,7 +9,7 @@ A Trello-like project management app built with **Next.js** (frontend) and **Go*
 - Real-time updates via WebSockets + Redis pub/sub
 - Workspace member invites with roles (owner, admin, member)
 - Labels, assignees, and due dates on tasks
-- Email/password auth + Google/GitHub OAuth
+- Email/password auth with email verification
 
 ## Quick start
 
@@ -50,7 +50,6 @@ npm run dev
 | Area | Endpoints |
 |------|-----------|
 | Auth | `POST /api/v1/auth/register`, `/login`, `/refresh`, `GET /auth/me` |
-| OAuth | `GET /api/v1/auth/google`, `/auth/github` (+ callbacks) |
 | Workspaces | CRUD + members + invitations |
 | Boards | CRUD, lists, tasks, comments, labels, assignees |
 | Real-time | `WS /ws?board_id=...&token=...` |
@@ -67,4 +66,4 @@ trello-clone/
 
 ## Environment variables
 
-See [`.env.example`](.env.example). Set OAuth client IDs/secrets to enable Google/GitHub login.
+See [`.env.example`](.env.example).

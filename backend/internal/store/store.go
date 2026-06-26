@@ -186,55 +186,6 @@ func (s *Store) DeleteRefreshToken(ctx context.Context, tokenHash string) error 
 	return err
 }
 
-func (s *Store) FindOrCreateOAuthUser(ctx context.Context, provider, providerUserID, email, name, avatarURL string) (*models.User, error) {
-	var userID uuid.UUID
-	err := s.pool.QueryRow(ctx,
-		`SELECT user_id FROM oauth_accounts WHERE provider = $1 AND provider_user_id = $2`,
-		provider, providerUserID,
-	).Scan(&userID)
-	if err == nil {
-		return s.GetUserByID(ctx, userID)
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return nil, err
-	}
-
-	tx, err := s.pool.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback(ctx)
-
-	existing, _ := s.GetUserByEmail(ctx, email)
-	if existing != nil {
-		userID = existing.ID
-	} else {
-		var avatar *string
-		if avatarURL != "" {
-			avatar = &avatarURL
-		}
-		err = tx.QueryRow(ctx,
-			`INSERT INTO users (email, name, avatar_url, email_verified_at) VALUES ($1, $2, $3, NOW())
-			 RETURNING id`, email, name, avatar,
-		).Scan(&userID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	_, err = tx.Exec(ctx,
-		`INSERT INTO oauth_accounts (user_id, provider, provider_user_id) VALUES ($1, $2, $3)`,
-		userID, provider, providerUserID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
-	}
-	return s.GetUserByID(ctx, userID)
-}
-
 // --- Workspaces ---
 
 func (s *Store) IsPlatformAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
